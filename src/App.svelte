@@ -1,7 +1,7 @@
 <script lang="ts">
   import svelteLogo from "./assets/svelte.svg";
-  // import Counter from "hydrate:lib/Counter.svelte";
-  import Counter from "./lib/Counter.svelte";
+  import Counter from "hydrate:lib/Counter.svelte";
+  // import Counter from "./lib/Counter.svelte";
 </script>
 
 <main>

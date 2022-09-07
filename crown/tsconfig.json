@@ -16,5 +16,10 @@
     "checkJs": true,
     "isolatedModules": true
   },
-  "include": ["/**/*.d.ts", "/**/*.ts", "/**/*.js", "/**/*.svelte"]
+  "include": [
+    "mount/**/*.d.ts",
+    "mount/**/*.ts",
+    "mount/**/*.js",
+    "mount/**/*.svelte"
+  ]
 }
