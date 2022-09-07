@@ -1,7 +1,5 @@
-import './app.css'
-import App from './App.svelte'
+import "./app.css";
+import { hydrate, lazy } from "./hydrate";
 
-new App({
-  target: document.getElementById('app'),
-  hydrate: true
-})
+hydrate();
+lazy();

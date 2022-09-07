@@ -1,0 +1,119 @@
+import { normalizePath } from "vite";
+import * as qs from "querystring";
+import * as fs from "fs";
+
+const VITE_FS_PREFIX = "/@fs/";
+const IS_WINDOWS = process.platform === "win32";
+export type SvelteQueryTypes = "style" | "script";
+
+export interface SvelteQuery {
+  svelte?: boolean;
+  type?: SvelteQueryTypes;
+}
+export interface SvelteRequest {
+  id: string;
+  cssId: string;
+  filename: string;
+  normalizedFilename: string;
+  query: SvelteQuery;
+  timestamp: number;
+  ssr: boolean;
+}
+
+/**
+ * posixify and remove root at start
+ *
+ * @param filename
+ * @param normalizedRoot
+ */
+function normalize(filename: string, normalizedRoot: string) {
+  return stripRoot(normalizePath(filename), normalizedRoot);
+}
+
+function existsInRoot(filename: string, root: string) {
+  if (filename.startsWith(VITE_FS_PREFIX)) {
+    return false; // vite already tagged it as out of root
+  }
+  return fs.existsSync(root + filename);
+}
+
+function createVirtualImportId(
+  filename: string,
+  root: string,
+  type: SvelteQueryTypes
+) {
+  const parts = ["svelte", `type=${type}`];
+  if (type === "style") {
+    parts.push("lang.css");
+  }
+  if (existsInRoot(filename, root)) {
+    filename = root + filename;
+  } else if (filename.startsWith(VITE_FS_PREFIX)) {
+    filename = IS_WINDOWS
+      ? filename.slice(VITE_FS_PREFIX.length) // remove /@fs/ from /@fs/C:/...
+      : filename.slice(VITE_FS_PREFIX.length - 1); // remove /@fs from /@fs/home/user
+  }
+  // return same virtual id format as vite-plugin-vue eg ...App.svelte?svelte&type=style&lang.css
+  return `${filename}?${parts.join("&")}`;
+}
+
+function parseToSvelteRequest(
+  id: string,
+  filename: string,
+  rawQuery: string,
+  root: string,
+  timestamp: number,
+  ssr: boolean
+): SvelteRequest {
+  const query = qs.parse(rawQuery) as SvelteQuery;
+  if (query.svelte != null) {
+    query.svelte = true;
+  }
+
+  const normalizedFilename = normalize(filename, root);
+  const cssId = createVirtualImportId(filename, root, "style");
+
+  return {
+    id,
+    filename,
+    normalizedFilename,
+    cssId,
+    query,
+    timestamp,
+    ssr,
+  };
+}
+
+function splitId(id: string) {
+  const parts = id.split(`?`, 2);
+  const filename = parts[0];
+  const rawQuery = parts[1];
+  return { filename, rawQuery };
+}
+
+function stripRoot(normalizedFilename: string, normalizedRoot: string) {
+  return normalizedFilename.startsWith(normalizedRoot + "/")
+    ? normalizedFilename.slice(normalizedRoot.length)
+    : normalizedFilename;
+}
+
+export type IdParser = (
+  id: string,
+  ssr: boolean,
+  timestamp?: number
+) => SvelteRequest | undefined;
+export function buildIdParser(options: any): IdParser {
+  const { root } = options;
+  const normalizedRoot = normalizePath(root);
+  return (id, ssr, timestamp = Date.now()) => {
+    const { filename, rawQuery } = splitId(id);
+    return parseToSvelteRequest(
+      id,
+      filename,
+      rawQuery,
+      normalizedRoot,
+      timestamp,
+      ssr
+    );
+  };
+}
