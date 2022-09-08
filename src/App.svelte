@@ -5,7 +5,7 @@
 </script>
 
 <main>
-  <h1>Partial Hydratino Demo</h1>
+  <h1>Partial Hydration Demo</h1>
 
   <div class="card">
     <Counter />
